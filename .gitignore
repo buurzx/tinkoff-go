@@ -1,0 +1,62 @@
+# Build artifacts and binaries
+bin/*
+
+# Go build cache and module cache
+.cache/
+go.work
+go.work.sum
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment and configuration files
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Log files
+*.log
+logs/
+
+# Generated protobuf files (if you want to regenerate them)
+# Uncomment the next line if you prefer to regenerate proto files
+# proto/*.pb.go
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker artifacts
+.dockerignore
+docker-compose.override.yml
+
+# Dependency directories
+vendor/
+
+# Air live reload tool
+tmp/
