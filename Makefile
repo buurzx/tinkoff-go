@@ -15,7 +15,9 @@ BINARY_NAME=tinkoff-go
 # Build targets
 .PHONY: all build clean test deps fmt vet examples help proto proto-clean proto-update \
         example-connect example-accounts example-streaming example-real-api \
+        example-real-streaming example-advanced-orders \
         run-connect run-accounts run-streaming run-real-api \
+        run-real-streaming run-advanced-orders \
         dev-setup lint docker-build docker-run release
 
 all: deps proto fmt vet test build
@@ -24,7 +26,7 @@ help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 deps: ## Download dependencies
 	$(GOMOD) download
@@ -64,7 +66,7 @@ proto-update: ## Update proto files from Tinkoff repository
 	@echo "Proto files updated. Run 'make proto' to regenerate Go code."
 
 # Example targets
-examples: example-connect example-accounts example-streaming example-real-api ## Build all examples
+examples: example-connect example-accounts example-streaming example-real-api example-real-streaming example-advanced-orders ## Build all examples
 
 example-connect: ## Build connection example
 	$(GOBUILD) -o bin/example-connect ./examples/connect
@@ -74,7 +76,7 @@ example-accounts: ## Build accounts example
 	$(GOBUILD) -o bin/example-accounts ./examples/accounts
 	@echo "Built example-accounts. Run with: ./bin/example-accounts"
 
-example-streaming: ## Build streaming example
+example-streaming: ## Build streaming example (mock)
 	$(GOBUILD) -o bin/example-streaming ./examples/streaming
 	@echo "Built example-streaming. Run with: ./bin/example-streaming"
 
@@ -82,13 +84,21 @@ example-real-api: ## Build real API example
 	$(GOBUILD) -o bin/example-real-api ./examples/real_api
 	@echo "Built example-real-api. Run with: TINKOFF_TOKEN=your_token ./bin/example-real-api"
 
+example-real-streaming: ## Build real-time streaming example
+	$(GOBUILD) -o bin/example-real-streaming ./examples/real_streaming
+	@echo "Built example-real-streaming. Run with: TINKOFF_TOKEN=your_token ./bin/example-real-streaming"
+
+example-advanced-orders: ## Build advanced orders example
+	$(GOBUILD) -o bin/example-advanced-orders ./examples/advanced_orders
+	@echo "Built example-advanced-orders. Run with: TINKOFF_TOKEN=your_token ./bin/example-advanced-orders"
+
 run-connect: example-connect ## Run connection example
 	./bin/example-connect
 
 run-accounts: example-accounts ## Run accounts example
 	./bin/example-accounts
 
-run-streaming: example-streaming ## Run streaming example
+run-streaming: example-streaming ## Run streaming example (mock)
 	./bin/example-streaming
 
 run-real-api: example-real-api ## Run real API example (requires TINKOFF_TOKEN)
@@ -98,6 +108,22 @@ run-real-api: example-real-api ## Run real API example (requires TINKOFF_TOKEN)
 		exit 1; \
 	fi
 	TINKOFF_TOKEN=$(TINKOFF_TOKEN) ./bin/example-real-api
+
+run-real-streaming: example-real-streaming ## Run real-time streaming example (requires TINKOFF_TOKEN)
+	@if [ -z "$(TINKOFF_TOKEN)" ]; then \
+		echo "Error: TINKOFF_TOKEN environment variable is required"; \
+		echo "Usage: make run-real-streaming TINKOFF_TOKEN=your_token"; \
+		exit 1; \
+	fi
+	TINKOFF_TOKEN=$(TINKOFF_TOKEN) ./bin/example-real-streaming
+
+run-advanced-orders: example-advanced-orders ## Run advanced orders example (requires TINKOFF_TOKEN)
+	@if [ -z "$(TINKOFF_TOKEN)" ]; then \
+		echo "Error: TINKOFF_TOKEN environment variable is required"; \
+		echo "Usage: make run-advanced-orders TINKOFF_TOKEN=your_token"; \
+		exit 1; \
+	fi
+	TINKOFF_TOKEN=$(TINKOFF_TOKEN) ./bin/example-advanced-orders
 
 # Development targets
 dev-setup: ## Set up development environment
@@ -121,3 +147,8 @@ release: ## Create a release build
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o bin/$(BINARY_NAME)-linux-amd64 -v .
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o bin/$(BINARY_NAME)-darwin-amd64 -v .
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o bin/$(BINARY_NAME)-windows-amd64.exe -v .
+
+# Quick test targets for development
+test-streaming: run-real-streaming ## Quick test of real-time streaming
+test-orders: run-advanced-orders ## Quick test of advanced orders
+test-all: run-real-api run-real-streaming run-advanced-orders ## Test all real API functionality

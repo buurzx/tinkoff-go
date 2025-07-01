@@ -412,3 +412,342 @@ func (c *RealClient) GetUserInfo(ctx context.Context) (*investapi.GetInfoRespons
 func (c *RealClient) Context() context.Context {
 	return c.ctx
 }
+
+// STREAMING FUNCTIONALITY
+
+// StartMarketDataStream starts real-time market data streaming
+func (c *RealClient) StartMarketDataStream() (investapi.MarketDataStreamService_MarketDataStreamClient, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(c.ctx, c.metadata)
+
+	// Start bidirectional stream
+	stream, err := c.marketDataStreamClient.MarketDataStream(ctxWithAuth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start market data stream: %w", err)
+	}
+
+	log.Println("🚀 Market data stream started")
+	return stream, nil
+}
+
+// SubscribeCandles subscribes to candle updates for instruments
+func (c *RealClient) SubscribeCandles(stream investapi.MarketDataStreamService_MarketDataStreamClient, instruments []string, interval investapi.SubscriptionInterval, waitingClose bool) error {
+	candleInstruments := make([]*investapi.CandleInstrument, len(instruments))
+	for i, instrumentID := range instruments {
+		candleInstruments[i] = &investapi.CandleInstrument{
+			InstrumentId: instrumentID,
+			Interval:     interval,
+		}
+	}
+
+	req := &investapi.MarketDataRequest{
+		Payload: &investapi.MarketDataRequest_SubscribeCandlesRequest{
+			SubscribeCandlesRequest: &investapi.SubscribeCandlesRequest{
+				SubscriptionAction: investapi.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
+				Instruments:        candleInstruments,
+				WaitingClose:       waitingClose,
+			},
+		},
+	}
+
+	err := stream.Send(req)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to candles: %w", err)
+	}
+
+	log.Printf("📊 Subscribed to candles for %d instruments", len(instruments))
+	return nil
+}
+
+// SubscribeOrderBook subscribes to order book updates for instruments
+func (c *RealClient) SubscribeOrderBook(stream investapi.MarketDataStreamService_MarketDataStreamClient, instruments []string, depth int32) error {
+	orderBookInstruments := make([]*investapi.OrderBookInstrument, len(instruments))
+	for i, instrumentID := range instruments {
+		orderBookInstruments[i] = &investapi.OrderBookInstrument{
+			InstrumentId: instrumentID,
+			Depth:        depth,
+		}
+	}
+
+	req := &investapi.MarketDataRequest{
+		Payload: &investapi.MarketDataRequest_SubscribeOrderBookRequest{
+			SubscribeOrderBookRequest: &investapi.SubscribeOrderBookRequest{
+				SubscriptionAction: investapi.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
+				Instruments:        orderBookInstruments,
+			},
+		},
+	}
+
+	err := stream.Send(req)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to order book: %w", err)
+	}
+
+	log.Printf("📖 Subscribed to order book for %d instruments", len(instruments))
+	return nil
+}
+
+// SubscribeTrades subscribes to trade updates for instruments
+func (c *RealClient) SubscribeTrades(stream investapi.MarketDataStreamService_MarketDataStreamClient, instruments []string) error {
+	tradeInstruments := make([]*investapi.TradeInstrument, len(instruments))
+	for i, instrumentID := range instruments {
+		tradeInstruments[i] = &investapi.TradeInstrument{
+			InstrumentId: instrumentID,
+		}
+	}
+
+	req := &investapi.MarketDataRequest{
+		Payload: &investapi.MarketDataRequest_SubscribeTradesRequest{
+			SubscribeTradesRequest: &investapi.SubscribeTradesRequest{
+				SubscriptionAction: investapi.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
+				Instruments:        tradeInstruments,
+			},
+		},
+	}
+
+	err := stream.Send(req)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to trades: %w", err)
+	}
+
+	log.Printf("💰 Subscribed to trades for %d instruments", len(instruments))
+	return nil
+}
+
+// SubscribeLastPrices subscribes to last price updates for instruments
+func (c *RealClient) SubscribeLastPrices(stream investapi.MarketDataStreamService_MarketDataStreamClient, instruments []string) error {
+	lastPriceInstruments := make([]*investapi.LastPriceInstrument, len(instruments))
+	for i, instrumentID := range instruments {
+		lastPriceInstruments[i] = &investapi.LastPriceInstrument{
+			InstrumentId: instrumentID,
+		}
+	}
+
+	req := &investapi.MarketDataRequest{
+		Payload: &investapi.MarketDataRequest_SubscribeLastPriceRequest{
+			SubscribeLastPriceRequest: &investapi.SubscribeLastPriceRequest{
+				SubscriptionAction: investapi.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
+				Instruments:        lastPriceInstruments,
+			},
+		},
+	}
+
+	err := stream.Send(req)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to last prices: %w", err)
+	}
+
+	log.Printf("💲 Subscribed to last prices for %d instruments", len(instruments))
+	return nil
+}
+
+// StartOrderStream starts order state streaming
+func (c *RealClient) StartOrderStream(accountIDs []string) (investapi.OrdersStreamService_OrderStateStreamClient, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(c.ctx, c.metadata)
+
+	req := &investapi.OrderStateStreamRequest{
+		Accounts: accountIDs,
+	}
+
+	stream, err := c.ordersStreamClient.OrderStateStream(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start order stream: %w", err)
+	}
+
+	log.Printf("🚀 Order stream started for %d accounts", len(accountIDs))
+	return stream, nil
+}
+
+// ADVANCED ORDER FUNCTIONALITY
+
+// PostStopOrder places a stop order using real API
+func (c *RealClient) PostStopOrder(ctx context.Context, req *investapi.PostStopOrderRequest) (*investapi.PostStopOrderResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	resp, err := c.stopOrdersClient.PostStopOrder(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to post stop order: %w", err)
+	}
+
+	return resp, nil
+}
+
+// GetStopOrders returns stop orders for an account using real API
+func (c *RealClient) GetStopOrders(ctx context.Context, accountID string, status investapi.StopOrderStatusOption) (*investapi.GetStopOrdersResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetStopOrdersRequest{
+		AccountId: accountID,
+		Status:    status,
+	}
+
+	resp, err := c.stopOrdersClient.GetStopOrders(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stop orders for account %s: %w", accountID, err)
+	}
+
+	return resp, nil
+}
+
+// CancelStopOrder cancels a stop order using real API
+func (c *RealClient) CancelStopOrder(ctx context.Context, accountID, stopOrderID string) (*investapi.CancelStopOrderResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.CancelStopOrderRequest{
+		AccountId:   accountID,
+		StopOrderId: stopOrderID,
+	}
+
+	resp, err := c.stopOrdersClient.CancelStopOrder(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to cancel stop order %s: %w", stopOrderID, err)
+	}
+
+	return resp, nil
+}
+
+// GetMaxLots returns maximum available lots for trading
+func (c *RealClient) GetMaxLots(ctx context.Context, accountID, instrumentID string, price *float64) (*investapi.GetMaxLotsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetMaxLotsRequest{
+		AccountId:    accountID,
+		InstrumentId: instrumentID,
+	}
+
+	if price != nil {
+		req.Price = floatToQuotation(*price)
+	}
+
+	resp, err := c.ordersClient.GetMaxLots(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get max lots: %w", err)
+	}
+
+	return resp, nil
+}
+
+// GetOrderPrice returns estimated order price
+func (c *RealClient) GetOrderPrice(ctx context.Context, accountID, instrumentID string, price float64, direction investapi.OrderDirection, quantity int64) (*investapi.GetOrderPriceResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetOrderPriceRequest{
+		AccountId:    accountID,
+		InstrumentId: instrumentID,
+		Price:        floatToQuotation(price),
+		Direction:    direction,
+		Quantity:     quantity,
+	}
+
+	resp, err := c.ordersClient.GetOrderPrice(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order price: %w", err)
+	}
+
+	return resp, nil
+}
+
+// ReplaceOrder replaces an existing order
+func (c *RealClient) ReplaceOrder(ctx context.Context, accountID, orderID, newIdempotencyKey string, quantity int64, price *float64) (*investapi.PostOrderResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.ReplaceOrderRequest{
+		AccountId:      accountID,
+		OrderId:        orderID,
+		IdempotencyKey: newIdempotencyKey,
+		Quantity:       quantity,
+	}
+
+	if price != nil {
+		req.Price = floatToQuotation(*price)
+	}
+
+	resp, err := c.ordersClient.ReplaceOrder(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to replace order %s: %w", orderID, err)
+	}
+
+	return resp, nil
+}
+
+// Helper function to convert float64 to Quotation
+func floatToQuotation(value float64) *investapi.Quotation {
+	units := int64(value)
+	nano := int32((value - float64(units)) * 1e9)
+
+	return &investapi.Quotation{
+		Units: units,
+		Nano:  nano,
+	}
+}
+
+// Helper function to convert Quotation to float64
+func quotationToFloat(q *investapi.Quotation) float64 {
+	if q == nil {
+		return 0.0
+	}
+	return float64(q.Units) + float64(q.Nano)/1e9
+}
