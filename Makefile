@@ -13,7 +13,10 @@ GOFMT=$(GOCMD) fmt
 BINARY_NAME=tinkoff-go
 
 # Build targets
-.PHONY: all build clean test deps fmt vet examples help proto
+.PHONY: all build clean test deps fmt vet examples help proto proto-clean proto-update \
+        example-connect example-accounts example-streaming example-real-api \
+        run-connect run-accounts run-streaming run-real-api \
+        dev-setup lint docker-build docker-run release
 
 all: deps proto fmt vet test build
 
