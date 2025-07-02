@@ -241,6 +241,38 @@ func (c *RealClient) GetInstrumentByTicker(ctx context.Context, ticker, classCod
 	return resp.Instrument, nil
 }
 
+// FindInstrument searches for instruments by query string using real API
+func (c *RealClient) FindInstrument(ctx context.Context, query string, instrumentType *investapi.InstrumentType, apiTradeAvailableOnly bool) ([]*investapi.InstrumentShort, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.FindInstrumentRequest{
+		Query: query,
+	}
+
+	if instrumentType != nil {
+		req.InstrumentKind = instrumentType
+	}
+
+	if apiTradeAvailableOnly {
+		req.ApiTradeAvailableFlag = &apiTradeAvailableOnly
+	}
+
+	resp, err := c.instrumentsClient.FindInstrument(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find instruments for query '%s': %w", query, err)
+	}
+
+	return resp.Instruments, nil
+}
+
 // GetPortfolio returns portfolio information for an account using real API
 func (c *RealClient) GetPortfolio(ctx context.Context, accountID string) (*investapi.PortfolioResponse, error) {
 	c.mu.RLock()
