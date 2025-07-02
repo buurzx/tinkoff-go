@@ -14,10 +14,8 @@ BINARY_NAME=tinkoff-go
 
 # Build targets
 .PHONY: all build clean test deps fmt vet examples help proto proto-clean proto-update \
-        example-connect example-accounts example-streaming example-real-api \
-        example-real-streaming example-advanced-orders \
-        run-connect run-accounts run-streaming run-real-api \
-        run-real-streaming run-advanced-orders \
+        example-real-api example-real-streaming example-advanced-orders \
+        run-real-api run-real-streaming run-advanced-orders \
         dev-setup lint docker-build docker-run release
 
 all: deps proto fmt vet test build
@@ -66,19 +64,7 @@ proto-update: ## Update proto files from Tinkoff repository
 	@echo "Proto files updated. Run 'make proto' to regenerate Go code."
 
 # Example targets
-examples: example-connect example-accounts example-streaming example-real-api example-real-streaming example-advanced-orders ## Build all examples
-
-example-connect: ## Build connection example
-	$(GOBUILD) -o bin/example-connect ./examples/connect
-	@echo "Built example-connect. Run with: ./bin/example-connect"
-
-example-accounts: ## Build accounts example
-	$(GOBUILD) -o bin/example-accounts ./examples/accounts
-	@echo "Built example-accounts. Run with: ./bin/example-accounts"
-
-example-streaming: ## Build streaming example (mock)
-	$(GOBUILD) -o bin/example-streaming ./examples/streaming
-	@echo "Built example-streaming. Run with: ./bin/example-streaming"
+examples: example-real-api example-real-streaming example-advanced-orders ## Build all examples
 
 example-real-api: ## Build real API example
 	$(GOBUILD) -o bin/example-real-api ./examples/real_api
@@ -92,14 +78,7 @@ example-advanced-orders: ## Build advanced orders example
 	$(GOBUILD) -o bin/example-advanced-orders ./examples/advanced_orders
 	@echo "Built example-advanced-orders. Run with: TINKOFF_TOKEN=your_token ./bin/example-advanced-orders"
 
-run-connect: example-connect ## Run connection example
-	./bin/example-connect
 
-run-accounts: example-accounts ## Run accounts example
-	./bin/example-accounts
-
-run-streaming: example-streaming ## Run streaming example (mock)
-	./bin/example-streaming
 
 run-real-api: example-real-api ## Run real API example (requires TINKOFF_TOKEN)
 	@if [ -z "$(TINKOFF_TOKEN)" ]; then \

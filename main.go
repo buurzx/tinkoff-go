@@ -17,9 +17,9 @@ func main() {
 	fmt.Println("  Get your token at: https://www.tinkoff.ru/invest/settings/")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  make run-connect    # Connection and basic functionality")
-	fmt.Println("  make run-accounts   # Account and portfolio management")
-	fmt.Println("  make run-streaming  # Real-time market data streaming")
+	fmt.Println("  make run-real-api          # Real API functionality (demo mode)")
+	fmt.Println("  make run-real-streaming    # Real-time market data streaming")
+	fmt.Println("  make run-advanced-orders   # Advanced order management")
 	fmt.Println()
 
 	// Check if token is available
@@ -32,14 +32,14 @@ func main() {
 
 	// Test basic connection
 	fmt.Println("🔌 Testing connection...")
-	c, err := client.New(token)
+	c, err := client.NewRealDemo(token)
 	if err != nil {
 		log.Fatalf("❌ Failed to create client: %v", err)
 	}
 	defer c.Close()
 
 	fmt.Println("✅ Successfully connected to Tinkoff Invest API")
-	fmt.Printf("   Demo mode: %v\n", false) // We'll get this from config later
+	fmt.Printf("   Demo mode: %v\n", true) // Using NewRealDemo for safety
 	fmt.Println()
 	fmt.Println("Ready to use! Check out the examples in ./examples/")
 }

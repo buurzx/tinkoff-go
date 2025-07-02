@@ -13,7 +13,7 @@ A powerful, production-ready Go library for the Tinkoff Invest API with full rea
 - 🛡️ **Type Safety**: Full type safety with generated protobuf types
 - ⚡ **High Performance**: Native Go implementation with goroutines and channels
 - 🔐 **Secure**: TLS connections, proper authentication, and demo mode
-- 🧪 **Mock Implementation**: Perfect for testing and development
+- 🧪 **Demo Mode**: Safe testing environment with sandbox API
 - 📊 **Comprehensive Coverage**: All API endpoints including advanced orders
 - 🎯 **Production Ready**: Error handling, retries, reconnection logic
 - 📈 **Advanced Orders**: Stop orders, conditional orders, order replacement
@@ -157,16 +157,7 @@ for {
 ### Available Examples
 
 ```bash
-# Basic connection and API test
-make run-connect
-
-# Account and portfolio management
-make run-accounts
-
-# Mock streaming (for development)
-make run-streaming
-
-# Real API demonstration
+# Real API demonstration (demo mode - safe for testing)
 TINKOFF_TOKEN=your_token make run-real-api
 
 # Real-time market data streaming
@@ -230,23 +221,15 @@ make proto-clean
 
 ```
 tinkoff-go/
-├── client/                 # Client implementations
-│   ├── client.go          # Main client interface
-│   ├── real_client.go     # Real API implementation
-│   └── client_test.go     # Comprehensive tests
+├── client/                 # Client implementation
+│   └── real_client.go     # Real API implementation with demo/prod modes
 ├── config/                # Configuration management
 │   └── config.go          # API endpoints and settings
-├── types/                 # Common types and utilities
-│   ├── common.go          # Type definitions
-│   └── common_test.go     # Type tests
 ├── proto/                 # Generated protobuf files
 │   ├── *.proto           # Official Tinkoff API definitions
 │   └── *.pb.go           # Generated Go code
 ├── examples/              # Example applications
-│   ├── connect/          # Basic connection test
-│   ├── accounts/         # Account management
-│   ├── streaming/        # Mock streaming demo
-│   ├── real_api/         # Real API demo
+│   ├── real_api/         # Real API demonstration
 │   ├── real_streaming/   # Real-time streaming
 │   └── advanced_orders/  # Advanced order management
 ├── internal/             # Internal utilities
@@ -393,24 +376,32 @@ go test -cover ./...
 
 # Run specific package tests
 go test -v ./client
-go test -v ./types
+go test -v ./config
 
 # Benchmark tests
 go test -bench=. ./...
 ```
 
-### Using Mock Client for Testing
+### Using Demo Mode for Testing
 
 ```go
 func TestTradingStrategy(t *testing.T) {
-    // Use mock client for unit tests
-    client := client.NewMock()
+    // Use demo mode for integration tests
+    token := os.Getenv("TINKOFF_TOKEN")
+    if token == "" {
+        t.Skip("TINKOFF_TOKEN not set")
+    }
+
+    client, err := client.NewRealDemo(token)
+    if err != nil {
+        t.Fatal(err)
+    }
     defer client.Close()
 
-    // Test your trading logic with predictable mock data
+    // Test your trading logic with real API in demo mode
     accounts, err := client.GetAccounts(context.Background())
     assert.NoError(t, err)
-    assert.Len(t, accounts, 1) // Mock returns 1 account
+    assert.NotEmpty(t, accounts)
 }
 ```
 
@@ -465,7 +456,7 @@ make proto-update proto
 
 # Build and test examples
 make examples
-make run-connect
+TINKOFF_TOKEN=your_token make run-real-api
 ```
 
 ## 📄 License
