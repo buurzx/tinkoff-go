@@ -107,7 +107,7 @@ func (c *RealClient) connect() error {
 		),
 	}
 
-	conn, err := grpc.Dial(c.config.ServerURL, opts...)
+	conn, err := grpc.NewClient(c.config.ServerURL, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %w", err)
 	}

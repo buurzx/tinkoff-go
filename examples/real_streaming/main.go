@@ -56,6 +56,10 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	// Create cancellable context for stream handlers
+	streamCtx, streamCancel := context.WithCancel(context.Background())
+	defer streamCancel()
+
 	// Start market data streaming
 	log.Println("\n📡 Starting market data streaming...")
 	marketDataStream, err := realClient.StartMarketDataStream()
@@ -95,7 +99,7 @@ func main() {
 
 	// Start market data handler
 	wg.Add(1)
-	go handleMarketDataStream(marketDataStream, &wg)
+	go handleMarketDataStream(streamCtx, marketDataStream, &wg)
 
 	// Start order streaming
 	log.Println("\n📋 Starting order streaming...")
@@ -105,7 +109,7 @@ func main() {
 	} else {
 		// Start order handler
 		wg.Add(1)
-		go handleOrderStream(orderStream, &wg)
+		go handleOrderStream(streamCtx, orderStream, &wg)
 	}
 
 	log.Println("\n✅ All streams started successfully!")
@@ -123,6 +127,9 @@ func main() {
 		log.Println("\n⏰ Timeout reached, shutting down...")
 	}
 
+	// Cancel stream contexts to interrupt handlers
+	streamCancel()
+
 	// Close streams
 	if marketDataStream != nil {
 		marketDataStream.CloseSend()
@@ -131,28 +138,61 @@ func main() {
 		orderStream.CloseSend()
 	}
 
-	// Wait for handlers to finish
-	wg.Wait()
-	log.Println("✅ Shutdown complete")
+	// Wait for handlers to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		log.Println("✅ Shutdown complete")
+	case <-time.After(3 * time.Second):
+		log.Println("⚠️ Shutdown timeout - forcing exit")
+	}
 }
 
 // handleMarketDataStream processes real-time market data
-func handleMarketDataStream(stream investapi.MarketDataStreamService_MarketDataStreamClient, wg *sync.WaitGroup) {
+func handleMarketDataStream(ctx context.Context, stream investapi.MarketDataStreamService_MarketDataStreamClient, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer log.Println("📡 Market data stream handler stopped")
 
+	// Channel to receive stream messages
+	respChan := make(chan *investapi.MarketDataResponse, 1)
+	errChan := make(chan error, 1)
+
+	// Start goroutine to receive messages
+	go func() {
+		for {
+			resp, err := stream.Recv()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			select {
+			case respChan <- resp:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
-		resp, err := stream.Recv()
-		if err != nil {
+		select {
+		case <-ctx.Done():
+			log.Println("📡 Market data stream handler cancelled")
+			return
+		case err := <-errChan:
 			if err == io.EOF {
 				log.Println("📡 Market data stream closed by server")
 				return
 			}
 			log.Printf("❌ Market data stream error: %v", err)
 			return
+		case resp := <-respChan:
+			processMarketDataResponse(resp)
 		}
-
-		processMarketDataResponse(resp)
 	}
 }
 
@@ -254,22 +294,49 @@ func processMarketDataResponse(resp *investapi.MarketDataResponse) {
 }
 
 // handleOrderStream processes real-time order updates
-func handleOrderStream(stream investapi.OrdersStreamService_OrderStateStreamClient, wg *sync.WaitGroup) {
+func handleOrderStream(
+	ctx context.Context,
+	stream investapi.OrdersStreamService_OrderStateStreamClient,
+	wg *sync.WaitGroup,
+) {
 	defer wg.Done()
 	defer log.Println("📡 Order stream handler stopped")
 
+	// Channel to receive stream messages
+	respChan := make(chan *investapi.OrderStateStreamResponse, 1)
+	errChan := make(chan error, 1)
+
+	// Start goroutine to receive messages
+	go func() {
+		for {
+			resp, err := stream.Recv()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			select {
+			case respChan <- resp:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
-		resp, err := stream.Recv()
-		if err != nil {
+		select {
+		case <-ctx.Done():
+			log.Println("📡 Order stream handler cancelled")
+			return
+		case err := <-errChan:
 			if err == io.EOF {
 				log.Println("📡 Order stream closed by server")
 				return
 			}
 			log.Printf("❌ Order stream error: %v", err)
 			return
+		case resp := <-respChan:
+			processOrderStreamResponse(resp)
 		}
-
-		processOrderStreamResponse(resp)
 	}
 }
 
