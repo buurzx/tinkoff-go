@@ -273,6 +273,28 @@ func (c *RealClient) FindInstrument(ctx context.Context, query string, instrumen
 	return resp.Instruments, nil
 }
 
+// GetBonds returns all bonds from Tinkoff Investment API
+func (c *RealClient) GetBonds(ctx context.Context) (*investapi.BondsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.InstrumentsRequest{}
+
+	resp, err := c.instrumentsClient.Bonds(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bonds: %w", err)
+	}
+
+	return resp, nil
+}
+
 // GetAssetBy returns asset information by AssetUID using real API
 // This method can be used to get emitent (brand) information from bond data
 func (c *RealClient) GetAssetBy(ctx context.Context, assetUID string) (*investapi.AssetResponse, error) {
