@@ -273,6 +273,56 @@ func (c *RealClient) FindInstrument(ctx context.Context, query string, instrumen
 	return resp.Instruments, nil
 }
 
+// GetAssetBy returns asset information by AssetUID using real API
+// This method can be used to get emitent (brand) information from bond data
+func (c *RealClient) GetAssetBy(ctx context.Context, assetUID string) (*investapi.AssetResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.AssetRequest{
+		Id: assetUID,
+	}
+
+	resp, err := c.instrumentsClient.GetAssetBy(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get asset by UID %s: %w", assetUID, err)
+	}
+
+	return resp, nil
+}
+
+// GetAssetFundamentals returns financial fundamentals for assets using real API
+// This method returns financial data like EBITDA, Revenue, NetIncome, PE Ratio, ROE, ROA, etc.
+func (c *RealClient) GetAssetFundamentals(ctx context.Context, assetUIDs []string) (*investapi.GetAssetFundamentalsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetAssetFundamentalsRequest{
+		Assets: assetUIDs,
+	}
+
+	resp, err := c.instrumentsClient.GetAssetFundamentals(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get asset fundamentals for %d assets: %w", len(assetUIDs), err)
+	}
+
+	return resp, nil
+}
+
 // GetPortfolio returns portfolio information for an account using real API
 func (c *RealClient) GetPortfolio(ctx context.Context, accountID string) (*investapi.PortfolioResponse, error) {
 	c.mu.RLock()
