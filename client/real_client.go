@@ -295,6 +295,69 @@ func (c *RealClient) GetBonds(ctx context.Context) (*investapi.BondsResponse, er
 	return resp, nil
 }
 
+// GetBondCoupons returns coupon calendar for a bond
+func (c *RealClient) GetBondCoupons(ctx context.Context, instrumentID string, from, to *time.Time) (*investapi.GetBondCouponsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetBondCouponsRequest{
+		InstrumentId: instrumentID,
+	}
+
+	if from != nil {
+		req.From = timestamppb.New(*from)
+	}
+	if to != nil {
+		req.To = timestamppb.New(*to)
+	}
+
+	resp, err := c.instrumentsClient.GetBondCoupons(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bond coupons: %w", err)
+	}
+
+	return resp, nil
+}
+
+// GetBondEvents returns events for a bond
+func (c *RealClient) GetBondEvents(ctx context.Context, instrumentID string, from, to *time.Time, eventType investapi.GetBondEventsRequest_EventType) (*investapi.GetBondEventsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetBondEventsRequest{
+		InstrumentId: instrumentID,
+		Type:         eventType,
+	}
+
+	if from != nil {
+		req.From = timestamppb.New(*from)
+	}
+	if to != nil {
+		req.To = timestamppb.New(*to)
+	}
+
+	resp, err := c.instrumentsClient.GetBondEvents(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bond events: %w", err)
+	}
+
+	return resp, nil
+}
+
 // GetAssetBy returns asset information by AssetUID using real API
 // This method can be used to get emitent (brand) information from bond data
 func (c *RealClient) GetAssetBy(ctx context.Context, assetUID string) (*investapi.AssetResponse, error) {
