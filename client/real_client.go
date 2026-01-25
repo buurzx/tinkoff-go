@@ -482,6 +482,30 @@ func (c *RealClient) GetOrders(ctx context.Context, accountID string) (*investap
 	return resp, nil
 }
 
+// GetLastPrices returns last prices for given FIGIs using real API
+func (c *RealClient) GetLastPrices(ctx context.Context, figis []string) (*investapi.GetLastPricesResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetLastPricesRequest{
+		Figi: figis,
+	}
+
+	resp, err := c.marketDataClient.GetLastPrices(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get last prices: %w", err)
+	}
+
+	return resp, nil
+}
+
 // GetCandles returns historical candles using real API
 func (c *RealClient) GetCandles(ctx context.Context, figi string, from, to time.Time, interval investapi.CandleInterval) (*investapi.GetCandlesResponse, error) {
 	c.mu.RLock()
