@@ -533,6 +533,46 @@ func (c *RealClient) GetCandles(ctx context.Context, figi string, from, to time.
 	return resp, nil
 }
 
+// GetLastTrades returns last trades for an instrument using real API
+func (c *RealClient) GetLastTrades(ctx context.Context, req *investapi.GetLastTradesRequest) (*investapi.GetLastTradesResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	resp, err := c.marketDataClient.GetLastTrades(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get last trades: %w", err)
+	}
+
+	return resp, nil
+}
+
+// GetOrderBook returns order book for an instrument using real API
+func (c *RealClient) GetOrderBook(ctx context.Context, req *investapi.GetOrderBookRequest) (*investapi.GetOrderBookResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	resp, err := c.marketDataClient.GetOrderBook(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order book: %w", err)
+	}
+
+	return resp, nil
+}
+
 // PostOrder places an order using real API
 func (c *RealClient) PostOrder(ctx context.Context, req *investapi.PostOrderRequest) (*investapi.PostOrderResponse, error) {
 	c.mu.RLock()
