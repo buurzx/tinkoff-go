@@ -247,6 +247,30 @@ func (c *RealClient) GetInstrumentByTicker(ctx context.Context, ticker, classCod
 	return resp.Instrument, nil
 }
 
+// GetInstrumentByUID returns instrument information by UID using real API
+func (c *RealClient) GetInstrumentByUID(ctx context.Context, uid string) (*investapi.Instrument, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.InstrumentRequest{
+		IdType: investapi.InstrumentIdType_INSTRUMENT_ID_TYPE_UID,
+		Id:     uid,
+	}
+
+	resp, err := c.instrumentsClient.GetInstrumentBy(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get instrument by UID %s: %w", uid, err)
+	}
+
+	return resp.Instrument, nil
+}
+
 // FindInstrument searches for instruments by query string using real API
 func (c *RealClient) FindInstrument(ctx context.Context, query string, instrumentType *investapi.InstrumentType, apiTradeAvailableOnly bool) ([]*investapi.InstrumentShort, error) {
 	c.mu.RLock()
