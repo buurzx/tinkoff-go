@@ -36,6 +36,9 @@ type RealClient struct {
 	ordersStreamClient     investapi.OrdersStreamServiceClient
 	operationsStreamClient investapi.OperationsStreamServiceClient
 
+	// Signals service
+	signalsClient investapi.SignalServiceClient
+
 	// Context and cancellation
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -126,6 +129,9 @@ func (c *RealClient) connect() error {
 	c.marketDataStreamClient = investapi.NewMarketDataStreamServiceClient(conn)
 	c.ordersStreamClient = investapi.NewOrdersStreamServiceClient(conn)
 	c.operationsStreamClient = investapi.NewOperationsStreamServiceClient(conn)
+
+	// Initialize signals client
+	c.signalsClient = investapi.NewSignalServiceClient(conn)
 
 	c.connected = true
 
@@ -961,6 +967,46 @@ func (c *RealClient) ReplaceOrder(ctx context.Context, accountID, orderID, newId
 		return nil, fmt.Errorf("failed to replace order %s: %w", orderID, err)
 	}
 
+	return resp, nil
+}
+
+// GetStrategies returns list of strategies from Tinkoff Signal API.
+func (c *RealClient) GetStrategies(ctx context.Context, req *investapi.GetStrategiesRequest) (*investapi.GetStrategiesResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+	if req == nil {
+		req = &investapi.GetStrategiesRequest{}
+	}
+	resp, err := c.signalsClient.GetStrategies(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get strategies: %w", err)
+	}
+	return resp, nil
+}
+
+// GetSignals returns list of signals from Tinkoff Signal API.
+func (c *RealClient) GetSignals(ctx context.Context, req *investapi.GetSignalsRequest) (*investapi.GetSignalsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+	if req == nil {
+		req = &investapi.GetSignalsRequest{}
+	}
+	resp, err := c.signalsClient.GetSignals(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get signals: %w", err)
+	}
 	return resp, nil
 }
 
