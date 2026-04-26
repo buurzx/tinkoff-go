@@ -536,8 +536,16 @@ func (c *RealClient) GetLastPrices(ctx context.Context, figis []string) (*invest
 	return resp, nil
 }
 
-// GetCandles returns historical candles using real API
+// GetCandles returns historical candles using real API.
+// For 1m interval the API may apply a default response limit; use GetCandlesWithLimit
+// when you need a specific number of candles (e.g. backfill).
 func (c *RealClient) GetCandles(ctx context.Context, figi string, from, to time.Time, interval investapi.CandleInterval) (*investapi.GetCandlesResponse, error) {
+	return c.GetCandlesWithLimit(ctx, figi, from, to, interval, 0)
+}
+
+// GetCandlesWithLimit returns historical candles with an explicit response limit.
+// For CANDLE_INTERVAL_1_MIN the API max limit is 2400. Pass 0 to use server default.
+func (c *RealClient) GetCandlesWithLimit(ctx context.Context, figi string, from, to time.Time, interval investapi.CandleInterval, limit int32) (*investapi.GetCandlesResponse, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -545,7 +553,6 @@ func (c *RealClient) GetCandles(ctx context.Context, figi string, from, to time.
 		return nil, fmt.Errorf("client not connected")
 	}
 
-	// Create context with authorization
 	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
 
 	req := &investapi.GetCandlesRequest{
@@ -553,6 +560,9 @@ func (c *RealClient) GetCandles(ctx context.Context, figi string, from, to time.
 		From:     timestamppb.New(from),
 		To:       timestamppb.New(to),
 		Interval: interval,
+	}
+	if limit > 0 {
+		req.Limit = &limit
 	}
 
 	resp, err := c.marketDataClient.GetCandles(ctxWithAuth, req)
