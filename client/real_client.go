@@ -438,6 +438,81 @@ func (c *RealClient) GetAssetFundamentals(ctx context.Context, assetUIDs []strin
 	return resp, nil
 }
 
+// GetForecastBy returns investment-house forecasts (targets + consensus) for an instrument by UID.
+func (c *RealClient) GetForecastBy(ctx context.Context, instrumentUID string) (*investapi.GetForecastResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetForecastRequest{
+		InstrumentId: instrumentUID,
+	}
+
+	resp, err := c.instrumentsClient.GetForecastBy(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get forecast for instrument %s: %w", instrumentUID, err)
+	}
+
+	return resp, nil
+}
+
+// GetConsensusForecasts returns aggregated analyst consensus forecasts (paged).
+func (c *RealClient) GetConsensusForecasts(ctx context.Context, page *investapi.Page) (*investapi.GetConsensusForecastsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	req := &investapi.GetConsensusForecastsRequest{
+		Paging: page,
+	}
+
+	resp, err := c.instrumentsClient.GetConsensusForecasts(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get consensus forecasts: %w", err)
+	}
+
+	return resp, nil
+}
+
+// GetDividends returns dividend events for an instrument by UID (or FIGI) over a date range.
+func (c *RealClient) GetDividends(ctx context.Context, instrumentUID string, from, to time.Time) (*investapi.GetDividendsResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	// Create context with authorization
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+
+	// InstrumentId (field 4) accepts figi or instrument_uid; Figi (field 1) is deprecated.
+	req := &investapi.GetDividendsRequest{
+		InstrumentId: instrumentUID,
+		From:         timestamppb.New(from),
+		To:           timestamppb.New(to),
+	}
+
+	resp, err := c.instrumentsClient.GetDividends(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dividends for instrument %s: %w", instrumentUID, err)
+	}
+
+	return resp, nil
+}
+
 // GetPortfolio returns portfolio information for an account using real API
 func (c *RealClient) GetPortfolio(ctx context.Context, accountID string) (*investapi.PortfolioResponse, error) {
 	c.mu.RLock()
