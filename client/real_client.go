@@ -221,6 +221,29 @@ func (c *RealClient) GetInstrumentByFIGI(ctx context.Context, figi string) (*inv
 	return resp.Instrument, nil
 }
 
+// GetFutureByFIGI returns the provider's future information by FIGI.
+func (c *RealClient) GetFutureByFIGI(ctx context.Context, figi string) (*investapi.Future, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+	req := &investapi.InstrumentRequest{
+		IdType: investapi.InstrumentIdType_INSTRUMENT_ID_TYPE_FIGI,
+		Id:     figi,
+	}
+
+	resp, err := c.instrumentsClient.FutureBy(ctxWithAuth, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get future by FIGI %s: %w", figi, err)
+	}
+
+	return resp.Instrument, nil
+}
+
 // GetInstrumentByTicker returns instrument information by ticker using real API
 func (c *RealClient) GetInstrumentByTicker(ctx context.Context, ticker, classCode string) (*investapi.Instrument, error) {
 	c.mu.RLock()

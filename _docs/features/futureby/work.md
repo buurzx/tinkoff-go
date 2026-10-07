@@ -1,0 +1,29 @@
+# SDK FutureBy implementation canon
+
+## Source, scope and responsibility
+
+Native profile: `/private/tmp/core-instrument-specification-canon/sdk-profile-spec7.md`. Protocol: `/Users/pavelro/projects/methodology/protocol.md`; active project instructions are loaded separately, not inferred from paths. Immediate SDK base85cc69dea234916daa5d1f8665063e7d45ba6998. One writer in `/private/tmp/tinkoff-go-futureby-spec7`; Beads administration in `/Users/pavelro/projects/t-monitor`. Independent critic before claim/code; fresh auditor after source freeze/checks.
+
+Runtime allowed: existing `client/real_client.go`, one GetFutureByFIGI method only. Tests: NEW `client/real_client_future_test.go`. Canon: these unique flow/work files. `go.mod`, `go.sum`, generated proto, config, transport setup, fields, connect, Close and existing method bodies are readonly. No real SDK constructor in tests. Stop on any required extra runtime/interface/module path and bring a concrete addendum to chief before expanding.
+
+Production forecast20–35 additions,0 deletions; tests150–300 and docs60–100 separately. Count final complete diff against immediate SDK base; hard300 production includes configuration/generated runtime if any. Do not compact code, weaken tests or split a live producer/consumer contract for the cap. No change to t-monitor source or vendor as part of this prerequisite.
+
+## Public contract and complete impact chain
+
+GetFutureByFIGI(ctx context.Context,figi string) (*investapi.Future,error). Source of types: existing generated proto InstrumentRequest/FutureResponse/Future, no manual copies or regeneration. Exactly InstrumentIdType_INSTRUMENT_ID_TYPE_FIGI plus requested Id, with ClassCode absent. Use instantiated private `c.instrumentsClient.FutureBy` under the existing SDK RLock and connected guard. Derive authenticated outgoing context from the caller context and SDK metadata in the same pattern as GetInstrumentByFIGI. Wrap RPC error with future/FIGI context and `%w`. Return provider Instrument without filling, rounding, converting, caching or logging it. Empty typed payload remains nil. SDK does not make a historical freshness assertion.
+
+Chain: existing generated schema -> existing generated InstrumentsServiceClient.FutureBy -> additive concrete RealClient getter -> future t-monitor thin wrapper -> narrow specification interface -> specification service. Targeted actual SDK client/examples/internal/config search found only concrete RealClient consumers; no declared consuming interface chain requires updates. Existing getters are untouched and all package consumers compile with native suite. The future consumer requires a separately accepted, available immutable SDK revision before normal module/vendor generation; this local checkpoint cannot substitute a fabricated version or permanent absolute-local replace.
+
+## Lifecycle and tests
+
+Follow existing RLock through RPC so Close's exclusive lock cannot mutate connection state during the request. Preserve existing lifecycle: caller cancellation releases a blocked RPC; Close retains its current behavior, including waiting for in-flight getter's read lock. Do not claim Close independently cancels a caller context it does not own, or repair unrelated SDK lifecycle concerns in this getter.
+
+Tests are in package client and construct the real RealClient only with its existing private connection/client/metadata/cancel/connected fields for a local bufconn generated transport. Register the generated concrete UnimplementedInstrumentsServiceServer; unary interceptor handles the generated full FutureBy method and checks generated request plus incoming auth. The interceptor is native transport behavior, not a handwritten client dependency fake. Test helpers/types follow all test functions. Stdlib checks avoid adding a test module dependency; no t.Fatal/t.Fatalf, wildcard mocks, time.Now fixture or broker token. Test values are explicit fixed literals; timeouts are bounded runtime safety rather than date fixtures.
+
+Tests prove success all raw financial fields survive; expected request enum and identifier and SDK authorization arrive; RPC status/error cause remains recognizable; nil Instrument is preserved; cancellation of an in-flight server call returns Canceled and server stops; disconnected and after Close paths issue no further RPC. Use channels/context rather than sleeps for synchronization. A focused race run proves new request/test lifetime does not introduce races; it does not claim all unrelated SDK streams are race-free.
+
+## Resource decision and gates
+
+Resource limits/lifetimes are in flow Resource decision. Runtime growth zero until method called; exactly one existing-transport unary per call, bounded by caller context and existing64MiB message ceiling, no stored snapshots or worker. Buffer tests capped1MiB/server sequential, all native resources cleaned. Source planning/readiness may overlap task18; compile/test/race only after direct CPU timing acknowledgement. Preserve fresh task18 audit slot precedence; no optional role consumes the last slot.
+
+Writer loads native profile + current protocol + builder role + Beads/Ponytail, verifies sole ready non-epic claim and exact source/base/preimages, then writes only this task. Run offline native `make vet`, `make test`, final gofmt/diff checks and `go test -race ./client` in SDK cwd. Record HEAD + dirty/untracked manifest/hashes + full diff/base + logs and production/test/docs/generated subtotals. Freeze writer. Fresh independent Sol6.1 Medium auditor loads kernel/role/profile and checks full frozen scope, AC, compatible consumers and evidence without repeating green suites. Orchestrator accepts and commits locally only after findings resolved and gates pass. No migration, service restart, configuration update or deployment is needed for this additive local SDK component; publication/pin task remains separate.
