@@ -348,6 +348,24 @@ func (c *RealClient) GetBonds(ctx context.Context) (*investapi.BondsResponse, er
 	return resp, nil
 }
 
+// GetTradingSchedules returns raw trading schedules from Tinkoff Investment API.
+func (c *RealClient) GetTradingSchedules(ctx context.Context, request *investapi.TradingSchedulesRequest) (*investapi.TradingSchedulesResponse, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.connected {
+		return nil, fmt.Errorf("client not connected")
+	}
+
+	ctxWithAuth := metadata.NewOutgoingContext(ctx, c.metadata)
+	resp, err := c.instrumentsClient.TradingSchedules(ctxWithAuth, request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trading schedules: %w", err)
+	}
+
+	return resp, nil
+}
+
 // GetBondCoupons returns coupon calendar for a bond
 func (c *RealClient) GetBondCoupons(ctx context.Context, instrumentID string, from, to *time.Time) (*investapi.GetBondCouponsResponse, error) {
 	c.mu.RLock()
