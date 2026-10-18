@@ -804,20 +804,15 @@ func (c *RealClient) Context() context.Context {
 
 // StartMarketDataStream starts real-time market data streaming
 func (c *RealClient) StartMarketDataStream() (investapi.MarketDataStreamService_MarketDataStreamClient, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if !c.connected {
+	if c == nil {
 		return nil, fmt.Errorf("client not connected")
 	}
-
-	// Create context with authorization
-	ctxWithAuth := metadata.NewOutgoingContext(c.ctx, c.metadata)
-
-	// Start bidirectional stream
-	stream, err := c.marketDataStreamClient.MarketDataStream(ctxWithAuth)
+	c.mu.RLock()
+	ctx := c.ctx
+	c.mu.RUnlock()
+	stream, err := c.MarketDataStream(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start market data stream: %w", err)
+		return nil, err
 	}
 
 	log.Println("🚀 Market data stream started")
